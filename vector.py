@@ -16,8 +16,7 @@ __ver_patch__ = 0
 import math
 from functools import wraps
 from types import GenericAlias
-from typing import (Any, Callable, Iterable, Iterator, TypeVar, Union, cast,
-                    overload)
+from typing import Any, Callable, Iterable, Iterator, TypeVar, Union, cast
 
 ##Number = TypeVar('Number', int, float, complex)
 
@@ -96,7 +95,9 @@ def onlytype(*types: type, names: str | None = None) -> Callable[[F], F]:
         def wrapped_func(self: Iterable, *args, **kwargs) -> Any:  # type: ignore
             for value in iter(self):
                 if not isinstance(value, types):
-                    raise TypeError(f"Vector is not composed entirely of {names}")
+                    raise TypeError(
+                        f"Vector is not composed entirely of {names}"
+                    )
             return function(self, *args, **kwargs)
 
         return cast(F, wrapped_func)
@@ -114,10 +115,14 @@ def onlytypemath(*types: type, name: str | None = None) -> Callable[[F], F]:
         def wrapped_func(self: Iterable, rhs: Iterable, *args, **kwargs) -> Any:  # type: ignore
             for value in iter(self):
                 if not isinstance(value, types):
-                    raise TypeError(f"Vector is not composed entirely of {name}")
+                    raise TypeError(
+                        f"Vector is not composed entirely of {name}"
+                    )
             for value in iter(rhs):
                 if not isinstance(value, types):
-                    raise TypeError(f"Operand is not composed entirely of {name}")
+                    raise TypeError(
+                        f"Operand is not composed entirely of {name}"
+                    )
             return function(self, rhs, *args, **kwargs)
 
         return cast(F, wrapped_func)
@@ -128,10 +133,11 @@ def onlytypemath(*types: type, name: str | None = None) -> Callable[[F], F]:
 def boolop(
     combine: str = "all",
 ) -> Callable[
-    [Callable[[Iterable[bool]], bool]], Callable[[Iterable[bool], Iterable[bool]], bool]
+    [Callable[[Iterable[bool]], bool]],
+    Callable[[Iterable[bool], Iterable[bool]], bool],
 ]:
     "Return vector boolian simple operator. Combine can by ('any', 'all')"
-    if not combine in {"any", "all"}:
+    if combine not in {"any", "all"}:
         raise ValueError("Combine must be either 'any' or 'all'!")
 
     def wrapper(
@@ -167,7 +173,9 @@ class Vector(Iterable[V]):
 
     __slots__ = ("__v", "dtype")
 
-    def __init__(self, *args: V, dims: int | None = None, dtype: type = tuple) -> None:
+    def __init__(
+        self, *args: V, dims: int | None = None, dtype: type = tuple
+    ) -> None:
         self.dtype = dtype
         if not hasattr(dtype, "__getitem__"):
             raise TypeError("Data type class is not subscriptable!")
@@ -206,7 +214,9 @@ class Vector(Iterable[V]):
         ##            index = ord(index.upper())-88
         return cast(V, self.__v[index])
 
-    def __setitem__(self, index: int, value: Union[int, float, complex]) -> None:
+    def __setitem__(
+        self, index: int, value: Union[int, float, complex]
+    ) -> None:
         if not hasattr(self.__v, "__setitem__"):
             dtype = self.dtype.__name__
             raise TypeError(
@@ -220,7 +230,10 @@ class Vector(Iterable[V]):
 
     @classmethod
     def from_iter(
-        cls, iterable: Iterable[T], dims: int | None = None, dtype: type = tuple
+        cls,
+        iterable: Iterable[T],
+        dims: int | None = None,
+        dtype: type = tuple,
     ) -> "Vector[T]":
         "Return Vector from iterable."
         return cast(type["Vector[T]"], cls)(*iterable, dims=dims, dtype=dtype)
@@ -228,7 +241,9 @@ class Vector(Iterable[V]):
     @classmethod
     def from_radians(cls, radians: Union[int, float]) -> "Vector[float]":
         "Return 2d unit vector from measure in radians"
-        return cast(type["Vector[float]"], cls)(math.cos(radians), math.sin(radians))
+        return cast(type["Vector[float]"], cls)(
+            math.cos(radians), math.sin(radians)
+        )
 
     @classmethod
     def from_points(
@@ -388,11 +403,15 @@ class Vector(Iterable[V]):
         "Modulo but from left hand side."
         return lhs % self
 
-    def __divmod__(self, rhs: V | Iterable[V]) -> tuple["Vector[V]", "Vector[V]"]:
+    def __divmod__(
+        self, rhs: V | Iterable[V]
+    ) -> tuple["Vector[V]", "Vector[V]"]:
         "Return tuple of (self // rhs, self % rhs)"
         return self // rhs, self % rhs
 
-    def __rdivmod__(self, lhs: V | Iterable[V]) -> tuple["Vector[V]", "Vector[V]"]:
+    def __rdivmod__(
+        self, lhs: V | Iterable[V]
+    ) -> tuple["Vector[V]", "Vector[V]"]:
         "Divmod but from left hand side"
         return lhs // self, lhs % self
 
@@ -458,7 +477,9 @@ class Vector(Iterable[V]):
         # pylint: disable=C0103
         x, y, z = self.__v
         bx, by, bz = other
-        return self.__class__(y * bz - by * z, z * bx - bz * x, x * by - bx * y)
+        return self.__class__(
+            y * bz - by * z, z * bx - bz * x, x * by - bx * y
+        )
 
     def dot(self, other: V | Iterable[V]) -> float:
         "Return the dot product of this vector with another"
@@ -552,7 +573,9 @@ class Vector(Iterable[V]):
     __rxor__ = __xor__
 
 
-def get_surface_normal(vec1: Vector[T], vec2: Vector[T], vec3: Vector[T]) -> Vector[T]:
+def get_surface_normal(
+    vec1: Vector[T], vec2: Vector[T], vec3: Vector[T]
+) -> Vector[T]:
     "Return the surface normal of a triangle."
     # pylint: disable=line-too-long
     ##    return Vector(
@@ -568,7 +591,7 @@ class Vector1(Vector[V]):
     __slots__ = ()
 
     def __init__(self, x: V, **kwargs: Any) -> None:
-        if not "dtype" in kwargs:
+        if "dtype" not in kwargs:
             kwargs["dtype"] = list
         super().__init__(x, **kwargs)
 
@@ -595,7 +618,7 @@ class Vector2(Vector1[V]):
 
     def __init__(self, x: V, y: V, **kwargs: Any) -> None:
         # pylint: disable=super-init-not-called,non-parent-init-called
-        if not "dtype" in kwargs:
+        if "dtype" not in kwargs:
             kwargs["dtype"] = list
         Vector.__init__(self, x, y, **kwargs)
 
@@ -620,7 +643,7 @@ class Vector3(Vector2[V]):
 
     def __init__(self, x: V, y: V, z: V, **kwargs: Any) -> None:
         # pylint: disable=super-init-not-called,non-parent-init-called
-        if not "dtype" in kwargs:
+        if "dtype" not in kwargs:
             kwargs["dtype"] = list
         Vector.__init__(self, x, y, z, **kwargs)
 
@@ -645,7 +668,7 @@ class Vector4(Vector3[V]):
 
     def __init__(self, x: V, y: V, z: V, w: V, **kwargs: Any) -> None:
         # pylint: disable=super-init-not-called,non-parent-init-called
-        if not "dtype" in kwargs:
+        if "dtype" not in kwargs:
             kwargs["dtype"] = list
         Vector.__init__(self, x, y, z, w, **kwargs)
 
@@ -670,7 +693,7 @@ class Vector5(Vector3[V]):
 
     def __init__(self, x: V, y: V, z: V, u: V, v: V, **kwargs: Any) -> None:
         # pylint: disable=super-init-not-called,non-parent-init-called,too-many-arguments
-        if not "dtype" in kwargs:
+        if "dtype" not in kwargs:
             kwargs["dtype"] = list
         Vector.__init__(self, x, y, z, u, v, **kwargs)
 

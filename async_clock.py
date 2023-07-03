@@ -18,8 +18,15 @@ import trio
 
 
 class Clock:
-    "pygame.time.Clock but with asyncronous tick"
-    __slots__ = ("fps_tick", "timepassed", "rawpassed", "last_tick", "fps", "fps_count")
+    "pygame.time.Clock but with asynchronous tick"
+    __slots__ = (
+        "fps_tick",
+        "timepassed",
+        "rawpassed",
+        "last_tick",
+        "fps",
+        "fps_count",
+    )
 
     def __init__(self) -> None:
         self.fps_tick = 0

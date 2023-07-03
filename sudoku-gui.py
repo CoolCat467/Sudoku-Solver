@@ -12,7 +12,7 @@ from typing import Any, cast
 
 import pygame
 import trio
-from pygame.locals import *
+from pygame.locals import K_ESCAPE, QUIT
 from pygame.rect import Rect
 from pygame.surface import Surface
 
@@ -20,6 +20,11 @@ import crop
 import sprite
 from async_clock import Clock
 from component import Component, ComponentManager, Event
+
+# types: attr-defined error: Module "sudoku" has no attribute "from_grid"
+# types: note: Another file has errors: /home/samuel/Desktop/Python/Projects/Sudoku-Solver/sprite.py
+# types: note: Another file has errors: /home/samuel/Desktop/Python/Projects/Sudoku-Solver/sudoku.py
+# types: note: Another file has errors: /home/samuel/Desktop/Python/Projects/Sudoku-Solver/location.py
 from sudoku import Sudoku, from_grid
 from vector import Vector2
 
@@ -100,7 +105,8 @@ class Timer(Component):
                 event, count = call.pop()
                 for _ in range(count):
                     nursery.start_soon(
-                        self.manager, Event(event, (("beyond", self.elapsed[event]),))
+                        self.manager,
+                        Event(event, (("beyond", self.elapsed[event]),)),
                     )
 
 
@@ -114,11 +120,13 @@ class FPSDisplay(sprite.Sprite):
         self.add_handler("tick", self.handle_tick)
         self.font = pygame.font.Font(FONT_FILENAME, FONT_SIZE)
         self.location = (SCREENSIZE.x - 40, 30)
+        # types: name-defined error: Name "Color" is not defined
         self.image = self.font.render("0", True, Color(0, 0, 0))
 
     async def handle_tick(self, event: Event[float]) -> None:
         "Tick event handler"
         fps = str(int(event["fps"]))
+        # types: name-defined error: Name "Color" is not defined
         self.image = self.font.render(fps, True, Color(0, 0, 0))
 
 
@@ -130,11 +138,15 @@ class Grid(Sudoku, ComponentManager):
         Sudoku.__init__(self, [0 for _ in range(81)], 9)
         ComponentManager.__init__(self, "grid")
 
-        self.solve_gen: Generator[tuple[tuple[int, int], int], None, None] | None = None
+        self.solve_gen: Generator[
+            tuple[tuple[int, int], int], None, None
+        ] | None = None
+        # types: name-defined error: Name "Color" is not defined
         self.outline_color = Color(255, 0, 0)
         self.outline_size = 2
 
         base = Surface((TILE_SIZE, TILE_SIZE))
+        # types: name-defined error: Name "Color" is not defined
         base.fill(Color(255, 165, 0))
 
         self.numbers = {}
@@ -142,6 +154,7 @@ class Grid(Sudoku, ComponentManager):
         for num in range(10):
             surf = base.copy()
             if num != 0:
+                # types: name-defined error: Name "Color" is not defined
                 text = font.render(f"{num}", True, Color(0, 0, 0))
                 ##                text = crop.crop_color(text, Color(0, 255, 0))
                 tw, th = text.get_size()
@@ -183,6 +196,7 @@ class Grid(Sudoku, ComponentManager):
             # types: error: "Component" has no attribute "value"
             # types: Another file has errors: /home/samuel/Desktop/Python/Projects/Sudoku-Solver/location.py
             # types: Another file has errors: /home/samuel/Desktop/Python/Projects/Sudoku-Solver/sprite.py
+            # types: attr-defined error: "Component" has no attribute "value"
             tile.value = self.grid.flat[idx]
             assert self.manager is not None, "should be bound"
             self.manager.group_add(tile)
@@ -197,7 +211,10 @@ class Grid(Sudoku, ComponentManager):
         missing = self.get_missing()
         self.solve_gen = self.solve_positions(missing)
         # types: error: "Component" has no attribute "add_event"
+        # types: attr-defined error: "Component" has no attribute "add_event"
         self.component("timer").add_event("next_step", 0.4)
+
+    # types: ^^^^^^^^^^^^^^^
 
     async def on_step(self, event: Event[int]) -> None:
         if event["position"] is not None:
@@ -215,7 +232,11 @@ class Grid(Sudoku, ComponentManager):
             await self(Event("solve_step", position=None, value=0))
             return None
         await self(
-            Event("solve_step", position=from_grid(row, col, self.dims), value=value)
+            Event(
+                "solve_step",
+                position=from_grid(row, col, self.dims),
+                value=value,
+            )
         )
 
     async def text_input(self, event: Event["str"]) -> None:
@@ -288,7 +309,10 @@ class Tile(sprite.Sprite):
         if event["button"] == 1:
             print(f"{self.name} clicked")
             # types: error: "None" not callable
+            # types: misc error: "None" not callable
             await self.manager(Event("text_input", name=self.name))
+
+    # types: ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
     async def check_selected(self, event: Event[str]) -> None:
         "Check if should be selected or not"
@@ -327,6 +351,7 @@ class Button(sprite.Sprite):
         super().__init__(name)
 
         # types: error: Argument 1 to "add_component" of "ComponentManager" has incompatible type "Type[Click]"; expected "Component"
+        # types: arg-type error: Argument 1 to "add_component" of "ComponentManager" has incompatible type "type[Click]"; expected "Component"
         self.add_component(sprite.Click)
 
 
@@ -343,6 +368,7 @@ class Client(sprite.Group):
 
     async def handle_keyup(self, event: Event[int]) -> str | None:
         "If escape key let go, post quit event"
+        # types: name-defined error: Name "K_ESCAPE" is not defined
         if event["key"] == K_ESCAPE:
             pygame.event.post(pygame.event.Event(pygame.QUIT))
             return "break"
@@ -372,7 +398,9 @@ async def async_run() -> None:
     group.add_component(Grid())
     _ = 0
     # types: error: "Component" has no attribute "set_grid"
+    # types: attr-defined error: "Component" has no attribute "set_grid"
     group.component("grid").set_grid(
+        # types: ^^^^^^^^^^^^^^^^^^
         [
             _,
             _,
@@ -493,9 +521,11 @@ async def async_run() -> None:
             Event(
                 "tick",
                 # types: error: Argument "time_passed" to "Event" has incompatible type "float"; expected "str"
+                # types: arg-type error: Argument "time_passed" to "Event" has incompatible type "float"; expected "str"
                 time_passed=time_passed / 1000,
                 # types:      ^
                 # types: error: Argument "fps" to "Event" has incompatible type "float"; expected "str"
+                # types: arg-type error: Argument "fps" to "Event" has incompatible type "float"; expected "str"
                 fps=clock.get_fps(),
                 # types:  ^
             )

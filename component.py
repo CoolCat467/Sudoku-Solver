@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Component - Component System
 
-"Component System"
+"Component System - Original Version"
 
 # Programmed by CoolCat467
 
@@ -31,7 +31,11 @@ class Event(dict[str, T]):
 
     @overload
     def __init__(
-        self, name: str, data: Iterable[tuple[str, T]] | None = None, /, **kwargs: None
+        self,
+        name: str,
+        data: Iterable[tuple[str, T]] | None = None,
+        /,
+        **kwargs: None,
     ) -> None:
         ...
 
@@ -69,7 +73,9 @@ class Component:
     def __init__(self, name: str) -> None:
         self.__name = name
         # weakref.CallableProxyType does not support class getitem
-        self.__manager: Optional["weakref.CallableProxyType[ComponentManager]"] = None
+        self.__manager: Optional[
+            "weakref.CallableProxyType[ComponentManager]"
+        ] = None
         self.__handlers: dict[str, Handler] = {}
 
     def __repr__(self) -> str:
@@ -90,11 +96,15 @@ class Component:
     def bind(self, manager: "ComponentManager") -> None:
         "Bind this component to a component manager"
         if self.__manager is not None:
-            raise RuntimeError("Cannot bind to manager if already bound! Unbind first!")
+            raise RuntimeError(
+                "Cannot bind to manager if already bound! Unbind first!"
+            )
         self.__manager = weakref.proxy(manager, self.__manager_ref_dead)
 
     @property
-    def manager(self) -> Optional["weakref.CallableProxyType[ComponentManager]"]:
+    def manager(
+        self,
+    ) -> Optional["weakref.CallableProxyType[ComponentManager]"]:
         "Manager if bound of this Component or None if not"
         return self.__manager
 
@@ -147,7 +157,9 @@ class ComponentManager(Component):
         handles = tuple(self.handled_events)
         return f'<"{self.name}" ComponentManager holding {held} handles {handles}>'
 
-    def _replaced_handler(self, old_handler: Handler, new_handler: Handler) -> Handler:
+    def _replaced_handler(
+        self, old_handler: Handler, new_handler: Handler
+    ) -> Handler:
         "Return replaced handler. Calls old handler first, and if not break calls new one"
 
         async def handle(event: Event[Any]) -> Any | None:
@@ -165,7 +177,9 @@ class ComponentManager(Component):
             component, Component
         ), f"{component} is not a Component instance! ({type(component) = })"
         if component.name in self.__components:
-            raise NameError(f"Component named {component.name!r} already exists!")
+            raise NameError(
+                f"Component named {component.name!r} already exists!"
+            )
         self.__components[component.name] = component
         component.bind(self)
         for name in component.get_handled():
@@ -178,7 +192,9 @@ class ComponentManager(Component):
                     assert (
                         current is not None
                     ), f"Impossible state where registered handler {name!r} does not exist"
-                    replace = self._replaced_handler(current, self.master_handler)
+                    replace = self._replaced_handler(
+                        current, self.master_handler
+                    )
                     self.add_handler(name, replace)
             self.handled_events[name].add(component.name)
 
@@ -210,7 +226,9 @@ class ComponentManager(Component):
 
             async def call_handler(component_name: str) -> None:
                 "Handle component calls"
-                value[component_name] = await self.component(component_name)(event)
+                value[component_name] = await self.component(component_name)(
+                    event
+                )
 
             async with trio.open_nursery() as nursery:
                 for component_name in iter(self.handled_events[event.name]):

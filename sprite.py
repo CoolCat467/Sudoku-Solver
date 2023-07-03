@@ -10,7 +10,7 @@ __title__ = "Sprite"
 __author__ = "CoolCat467"
 __version__ = "0.0.0"
 
-from typing import Any, Generic, cast
+from typing import Any
 
 from pygame import mask
 from pygame.color import Color
@@ -62,7 +62,9 @@ class Sprite(DirtySprite, ComponentManager):
         if prev_size == (0, 0) or self.rect.size == (0, 0):
             return
 
-    image_dims = property(__get_image_dims, __set_image_dims, doc="Image dimentions")
+    image_dims = property(
+        __get_image_dims, __set_image_dims, doc="Image dimentions"
+    )
 
     def __get_image(self) -> Surface | None:
         "Return surface of this sprite"
@@ -76,7 +78,9 @@ class Sprite(DirtySprite, ComponentManager):
         self.dirty = 1
 
     image = property(
-        __get_image, __set_image, doc="Image property auto-updating dimentions."
+        __get_image,
+        __set_image,
+        doc="Image property auto-updating dimentions.",
     )
 
     ##### Extra
@@ -89,7 +93,9 @@ class Sprite(DirtySprite, ComponentManager):
             return False
 
         for group in self.groups():
-            assert isinstance(group, LayeredUpdates), "Group must have get_sprites_at"
+            assert isinstance(
+                group, LayeredUpdates
+            ), "Group must have get_sprites_at"
             sprites_at = group.get_sprites_at(position)
             if not sprites_at:
                 continue
@@ -342,7 +348,10 @@ class DragOutline(Component):
         if self.manager is None:
             return
         await self.manager(
-            Event("outline", {"enable": True, "color": self.color, "size": self.size})
+            Event(
+                "outline",
+                {"enable": True, "color": self.color, "size": self.size},
+            )
         )
 
     async def stop_drag(self, event: Event[Any]) -> None:
