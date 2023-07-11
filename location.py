@@ -13,7 +13,7 @@ __ver_major__ = 0
 __ver_minor__ = 0
 __ver_patch__ = 0
 
-from typing import TypeVar, Union, cast, overload
+from typing import TypeVar, overload
 
 from pygame.rect import Rect
 
