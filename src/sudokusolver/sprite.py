@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# TITLE - DISCRIPTION
+# TITLE - DESCRIPTION
 
-"Sprite"
+"Sprite."
 
 # Programmed by CoolCat467
+from __future__ import annotations
 
 __title__ = "Sprite"
 __author__ = "CoolCat467"
@@ -12,18 +12,17 @@ __version__ = "0.0.0"
 
 from typing import Any
 
+from component import Component, ComponentManager, Event
+from location import Location
 from pygame import mask
 from pygame.color import Color
 from pygame.rect import Rect
 from pygame.sprite import DirtySprite, LayeredDirty, LayeredUpdates
 from pygame.surface import Surface
 
-from component import Component, ComponentManager, Event
-from location import Location
-
 
 class Sprite(DirtySprite, ComponentManager):
-    "Both Dirty Sprite and Component Manager"
+    "Both Dirty Sprite and Component Manager."
     __slots__ = ("__location", "rect")
 
     def __init__(self, name: str) -> None:
@@ -43,7 +42,7 @@ class Sprite(DirtySprite, ComponentManager):
     location = property(__get_location, __set_location, doc="Location")
 
     def __get_image_dims(self) -> tuple[int, int]:
-        "Return size of internal rectangle"
+        "Return size of internal rectangle."
         return self.rect.size
 
     def __set_image_dims(self, value: tuple[int, int]) -> None:
@@ -55,47 +54,42 @@ class Sprite(DirtySprite, ComponentManager):
         if self.rect.center == pre_loc:
             return
 
-        rel = tuple(self.rect.center - pre_loc)
+        tuple(self.rect.center - pre_loc)
 
         self.location = pre_loc
 
         if prev_size == (0, 0) or self.rect.size == (0, 0):
             return
 
-    image_dims = property(
-        __get_image_dims, __set_image_dims, doc="Image dimentions"
-    )
+    image_dims = property(__get_image_dims, __set_image_dims, doc="Image dimensions")
 
     def __get_image(self) -> Surface | None:
-        "Return surface of this sprite"
+        "Return surface of this sprite."
         return self.__image
 
     def __set_image(self, image: Surface | None) -> None:
-        "Set surface and update image_dims"
+        "Set surface and update image_dims."
         self.__image = image
-        if not image is None:
+        if image is not None:
             self.image_dims = image.get_size()
         self.dirty = 1
 
     image = property(
         __get_image,
         __set_image,
-        doc="Image property auto-updating dimentions.",
+        doc="Image property auto-updating dimensions.",
     )
 
     ##### Extra
     def is_selected(self, position: tuple[int, int]) -> bool:
-        "Return True if visible, collision with point, and topmost at point"
-
+        "Return True if visible, collision with point, and topmost at point."
         if not self.visible:
             return False
         if not self.rect.collidepoint(position):
             return False
 
         for group in self.groups():
-            assert isinstance(
-                group, LayeredUpdates
-            ), "Group must have get_sprites_at"
+            assert isinstance(group, LayeredUpdates), "Group must have get_sprites_at"
             sprites_at = group.get_sprites_at(position)
             if not sprites_at:
                 continue
@@ -110,7 +104,7 @@ LayeredDirty.__class_getitem__ = lambda x: LayeredDirty  # type: ignore[attr-def
 
 
 class Group(LayeredDirty[Sprite], ComponentManager):
-    "Group of Layered Dirty Sprites"
+    "Group of Layered Dirty Sprites."
     __slots__ = ()
 
     def __init__(self, name: str, *sprites: Sprite, **kwargs: Any) -> None:
@@ -133,7 +127,7 @@ class Group(LayeredDirty[Sprite], ComponentManager):
 
 
 class Click(Component):
-    "Raise `click` and `click_end` events on sprite when clicked"
+    "Raise `click` and `click_end` events on sprite when clicked."
     __slots__ = ("selected",)
 
     def __init__(self) -> None:
@@ -145,7 +139,7 @@ class Click(Component):
         self.add_handler("MouseButtonUp", self.handle_mouse_up)
 
     async def handle_mouse_down(self, event: Event[tuple[int, int]]) -> None:
-        "Handle mouse down events"
+        "Handle mouse down events."
         if self.manager is None:
             return
         if self.manager.is_selected(event["pos"]):
@@ -156,18 +150,18 @@ class Click(Component):
             await self.manager(Event("click_stop", event))
 
     async def handle_mouse_up(self, event: Event[Any]) -> None:
-        "Handle mouse up events"
+        "Handle mouse up events."
         if self.selected and self.manager is not None:
             self.selected = False
             await self.manager(Event("click_stop", event))
 
 
 class Draggable(Component):
-    "Make Sprite Draggable"
+    "Make Sprite Draggable."
     __slots__ = ("active",)
 
     def __init__(self) -> None:
-        super().__init__("dragable")
+        super().__init__("draggable")
 
         self.active = False
 
@@ -176,17 +170,17 @@ class Draggable(Component):
         self.add_handler("MouseMotion", self.handle_mouse_motion)
 
     async def drag_start(self, event: Event[Any]) -> str:
-        "Start dragging"
+        "Start dragging."
         self.active = True
         return "break"
 
     async def drag_end(self, event: Event[Any]) -> str:
-        "Start dragging"
+        "Start dragging."
         self.active = False
         return "break"
 
     async def handle_mouse_motion(self, event: Event[tuple[int, int]]) -> None:
-        "Handle mouse motion events"
+        "Handle mouse motion events."
         if not self.active or self.manager is None:
             return
         assert isinstance(self.manager, Sprite)
@@ -195,7 +189,7 @@ class Draggable(Component):
 
 
 class PressHoldDrag(Component):
-    "Raise drag events when held down"
+    "Raise drag events when held down."
     __slots__ = ()
 
     def __init__(self) -> None:
@@ -216,7 +210,7 @@ class PressHoldDrag(Component):
 
 
 class ToggleDrag(Component):
-    "Raise drag events when held down"
+    "Raise drag events when held down."
     __slots__ = ("active",)
 
     def __init__(self) -> None:
@@ -228,7 +222,7 @@ class ToggleDrag(Component):
         self.add_handler("WindowLeave", self.handle_win_leave)
 
     async def update(self) -> None:
-        "Raise drag or drag_stop events depending on state"
+        "Raise drag or drag_stop events depending on state."
         if self.manager is None:
             return
         if self.active:
@@ -237,19 +231,19 @@ class ToggleDrag(Component):
             await self.manager(Event("drag_stop"))
 
     async def handle_click(self, event: Event[Any]) -> None:
-        "Toggle active on click event"
+        "Toggle active on click event."
         self.active = not self.active
         await self.update()
 
     async def handle_win_leave(self, event: Event[Any]) -> None:
-        "If active, stop dragging"
+        "If active, stop dragging."
         if self.active:
             self.active = False
             await self.update()
 
 
 class Outline(Component):
-    "Outline sprite"
+    "Outline sprite."
     __slots__ = ("active", "mask_threshold")
 
     def __init__(self) -> None:
@@ -261,10 +255,8 @@ class Outline(Component):
         self.add_handler("outline", self.outline_handler)
 
     @staticmethod
-    def _get_outline(
-        surface: Surface, size: int, color: Color, mask_threshold: int
-    ) -> Surface:
-        "Outline surface"
+    def _get_outline(surface: Surface, size: int, color: Color, mask_threshold: int) -> Surface:
+        "Outline surface."
         w, h = surface.get_size()
 
         diameter = size * 2
@@ -332,7 +324,7 @@ class Outline(Component):
 
 
 class DragOutline(Component):
-    "Enable outline while dragging"
+    "Enable outline while dragging."
     __slots__ = ("color", "size")
 
     def __init__(self) -> None:
@@ -351,7 +343,7 @@ class DragOutline(Component):
             Event(
                 "outline",
                 {"enable": True, "color": self.color, "size": self.size},
-            )
+            ),
         )
 
     async def stop_drag(self, event: Event[Any]) -> None:
@@ -364,12 +356,12 @@ class DragOutline(Component):
                     "enable": False,
                     "color": self.color,
                 },
-            )
+            ),
         )
 
 
 def run() -> None:
-    "Run test of module"
+    "Run test of module."
 
 
 if __name__ == "__main__":

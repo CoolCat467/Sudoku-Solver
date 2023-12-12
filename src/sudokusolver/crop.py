@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Crop functions - Functions to crop Surfaces
 
-"Crop functions"
+"Crop functions."
 
 # Programmed by CoolCat467
 
@@ -16,7 +15,7 @@ from pygame.surface import Surface
 
 
 def crop_color(surface: Surface, color: Color) -> Surface:
-    "Crop out color from surface"
+    "Crop out color from surface."
     w, h = surface.get_size()
 
     surf = surface.copy().convert_alpha()
@@ -51,7 +50,7 @@ def crop_color(surface: Surface, color: Color) -> Surface:
 
 
 def run() -> None:
-    "Run test of module"
+    "Run test of module."
 
 
 if __name__ == "__main__":

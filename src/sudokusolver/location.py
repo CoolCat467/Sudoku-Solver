@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Location - Vector2 bound to a rect
 
-"Location"
+"Location."
 
 # Programmed by CoolCat467
+from __future__ import annotations
 
 __title__ = "Location"
 __author__ = "CoolCat467"
@@ -13,18 +13,19 @@ __ver_major__ = 0
 __ver_minor__ = 0
 __ver_patch__ = 0
 
-from typing import TypeVar, overload
-
-from pygame.rect import Rect
+from typing import TYPE_CHECKING, TypeVar, overload
 
 from vector import Vector, Vector2
+
+if TYPE_CHECKING:
+    from pygame.rect import Rect
 
 T = TypeVar("T")
 ##L = TypeVar('L', bound = int | float)
 
 
 class Location(Vector2[int]):
-    "Location bound to the center of a given rectangle"
+    "Location bound to the center of a given rectangle."
     __slots__ = ("_rect",)
 
     @overload
@@ -32,12 +33,10 @@ class Location(Vector2[int]):
         ...  # type: ignore[misc]
 
     @overload
-    def __new__(cls, *args: int, dtype: None = None) -> "Location":
+    def __new__(cls, *args: int, dtype: None = None) -> Location:
         ...
 
-    def __new__(
-        cls, *args: int, dtype: type | None = None  # type: ignore[misc]
-    ) -> "Location | Vector2[int]":
+    def __new__(cls, *args: int, dtype: type | None = None) -> Location | Vector2[int]:  # type: ignore[misc]
         "Super hack to return Vector2 if data type is not None, otherwise new Location."
         if dtype is not None:
             new_vec = super().__new__(Vector2)
@@ -50,9 +49,7 @@ class Location(Vector2[int]):
         self._rect = rect
         super().__init__(*self._rect.center, dtype=list)
 
-    def __setitem__(
-        self, index: int, value: int | float | complex, normal: bool = False
-    ) -> None:
+    def __setitem__(self, index: int, value: int | float | complex, normal: bool = False) -> None:
         "Set item, but if not normal, updates rectangle as well."
         if isinstance(value, complex):
             raise ValueError("No complex for Locations")
@@ -77,7 +74,7 @@ class Location(Vector2[int]):
 
 
 def run() -> None:
-    "Run program"
+    "Run program."
 
 
 if __name__ == "__main__":

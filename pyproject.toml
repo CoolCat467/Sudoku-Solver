@@ -1,33 +1,53 @@
 [build-system]
-requires = ["setuptools>=42.0", "wheel"]
+requires = ["setuptools >= 64"]
 build-backend = "setuptools.build_meta"
 
 [project]
+name = "sudokusolver"
+dynamic = ["version"]
+authors = [
+  { name="CoolCat467", email="CoolCat467@duck.com" },
+]
+description = "Sudoku Solver engine and GUI."
+readme = {file = "README.md", content-type = "text/markdown"}
+license = {file = "LICENSE"}
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Utilities",
+    "Operating System :: OS Independent",
+    "Framework :: Trio",
+    "Typing :: Typed",
+]
+keywords = ["sudoku", "sudoku-game", "gui", "pygame"]
 dependencies = [
-    "numpy",
-    "pygame",
-    "trio",
+    "numpy~=1.26.2",
+    "pygame~=2.5.2",
+    "trio~=0.23.1",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "black",
-    "flake8",
-    "flake8-noqa",
-    "isort",
-    "mypy",
-    "pre-commit",
-    "pre-commit-hooks",
-    "pycln",
-    "pytest",
-    "pytest-cov",
-    "pytest-trio",
-    "tox",
-    "trio-typing[mypy]",
-]
+[tool.setuptools.dynamic]
+version = {attr = "sanescansrv.server.__version__"}
+
+[project.urls]
+"Homepage" = "https://github.com/CoolCat467/Sudoku-Solver"
+"Source" = "https://github.com/CoolCat467/Sudoku-Solver"
+"Bug Tracker" = "https://github.com/CoolCat467/Sudoku-Solver/issues"
+
+[tool.setuptools.package-data]
+sudokusolver = ["py.typed", "data/*"]
 
 [tool.mypy]
-plugins = ["numpy.typing.mypy_plugin", "trio_typing.plugin"]
+plugins = ["numpy.typing.mypy_plugin"]
 mypy_path = "src"
 check_untyped_defs = true
 disallow_any_generics = true
@@ -38,6 +58,7 @@ no_implicit_optional = true
 no_implicit_reexport = true
 show_column_numbers = true
 show_error_codes = true
+show_traceback = true
 strict = true
 strict_equality = true
 warn_redundant_casts = true
@@ -46,12 +67,54 @@ warn_unreachable = true
 warn_unused_configs = true
 warn_unused_ignores = true
 
-[tool.black]
-line-length = 79
-target-version = ['py311']
+[tool.ruff.isort]
+combine-as-imports = true
 
-[tool.isort]
-profile = "black"
-combine_as_imports = true
-line_length = 79
-skip = [".git", ".github", ".venv"]
+[tool.pycln]
+all = true
+disable_all_dunder_policy = true
+
+[tool.black]
+line-length = 120  # Will not raise errors if too big, see below.
+target-version = ['py39']
+
+[tool.ruff]
+line-length = 120  # I don't care about line length a whole lot, just that it's not TOO big.
+fix = true
+
+include = ["*.py", "*.pyi", "**/pyproject.toml"]
+select = [
+    "A",     # flake8-builtins
+    "ASYNC", # flake8-async
+    "B",     # flake8-bugbear
+    "C4",    # flake8-comprehensions
+    "COM",   # flake8-commas
+    "D",     # pydocstyle
+    "E",     # Error
+    "EXE",   # flake8-executable
+    "F",     # pyflakes
+    "FA",    # flake8-future-annotations
+    "I",     # isort
+    "N",     # pep8-naming
+    "PIE",   # flake8-pie
+    "PT",    # flake8-pytest-style
+    "PYI",   # flake8-pyi
+    "Q",     # flake8-quotes
+    "RET",   # flake8-return
+    "RUF",   # Ruff-specific rules
+    "S",     # flake8-bandit
+    "SIM",   # flake8-simplify
+    "SLOT",  # flake8-slots
+    "TCH",   # flake8-type-checking
+    "UP",    # pyupgrade
+    "W",     # Warning
+    "YTT",   # flake8-2020
+]
+extend-ignore = [
+##    "E501",  # line-too-long
+    "S101",  # use of assert for tests and type narrowing
+    "D203",  # blank line thing
+    "D204",  # blank line thing
+    "D211",  # no-blank-line-before-class
+    "D213",  # multi-line-summary-second-line
+]

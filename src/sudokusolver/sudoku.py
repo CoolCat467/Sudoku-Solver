@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Sudoku Solver - Solve Sudoku puzzles with wave function collapse
 
-"Sudoku Solver"
+"Sudoku Solver."
 
 # https://www.learn-sudoku.com/basic-techniques.html
 
 # Programmed by CoolCat467
+from __future__ import annotations
 
 __title__ = "Sudoku Solver"
 __author__ = "CoolCat467"
@@ -17,36 +17,37 @@ __ver_patch__ = 0
 
 import json
 from collections import deque
-from collections.abc import Container, Generator, Iterable
 from itertools import permutations
 from math import ceil, sqrt
+from typing import TYPE_CHECKING
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from collections.abc import Container, Generator, Iterable
 
 Int8 = np.dtype[np.int8]
 Line = np.ndarray[int, Int8]
 
 
 def get_missing(line: Container[int]) -> set[int]:
-    "Return all missing numbers from line"
+    "Return all missing numbers from line."
     return {x for x in range(1, 10) if x not in line}
 
 
 def flat_to_grid(index: int, dims: int = 9) -> tuple[int, int]:
-    "Return grid index of given flat index"
+    "Return grid index of given flat index."
     col, row = divmod(index, dims)
     return row, col
 
 
-def grid_to_sector(
-    row: int, col: int, sector_size: int = 3
-) -> tuple[int, int]:
-    "Return sector that contains given grid index"
+def grid_to_sector(row: int, col: int, sector_size: int = 3) -> tuple[int, int]:
+    "Return sector that contains given grid index."
     return (row // sector_size, col // sector_size)
 
 
 def grid_to_flat(row: int, col: int, dims: int = 9) -> int:
-    "Get flat index from grid index"
+    "Get flat index from grid index."
     return col * dims + row
 
 
@@ -56,13 +57,13 @@ def grid_to_flat(row: int, col: int, dims: int = 9) -> int:
 
 
 def row_indexes(column: int, dims: int = 9) -> set[int]:
-    "Get row indexes from column"
-    return {i for i in range(column * dims, (column + 1) * dims)}
+    "Get row indexes from column."
+    return set(range(column * dims, (column + 1) * dims))
 
 
 def column_indexes(row: int, dims: int = 9) -> set[int]:
-    "Get column indexes from row"
-    return {i for i in range(row, dims * dims, dims)}
+    "Get column indexes from row."
+    return set(range(row, dims * dims, dims))
 
 
 def show_indexes(indexes: Iterable[int]) -> None:
@@ -73,10 +74,8 @@ def show_indexes(indexes: Iterable[int]) -> None:
     print(grid)
 
 
-def sector_indexes(
-    sector_row: int, sector_col: int, sector_size: int = 3
-) -> set[int]:
-    "Get sector indexes from sector number"
+def sector_indexes(sector_row: int, sector_col: int, sector_size: int = 3) -> set[int]:
+    "Get sector indexes from sector number."
     dims = sector_size * sector_size
 
     indexes = set()
@@ -105,10 +104,8 @@ def sector_indexes(
 # 666 777 888
 
 
-def get_related_areas(
-    index: int, sector_size: int = 3
-) -> tuple[set[int], set[int], set[int]]:
-    """Return row, column, and sector indexes related to a given position"""
+def get_related_areas(index: int, sector_size: int = 3) -> tuple[set[int], set[int], set[int]]:
+    """Return row, column, and sector indexes related to a given position."""
     dims = sector_size * sector_size
     row, col = flat_to_grid(index, dims)
     sector = grid_to_sector(row, col, sector_size)
@@ -120,16 +117,16 @@ def get_related_areas(
 
 
 def get_related(index: int, sector_size: int = 3) -> set[int]:
-    """Get set of indexes related to a given position"""
+    """Get set of indexes related to a given position."""
     row, col, sec = get_related_areas(index, sector_size)
     sec.update(row, col)
     return sec
 
 
 class Sudoku:
-    "Represents Sudoku Grid"
+    "Represents Sudoku Grid."
 
-    __slots__ = ("grid", "dims", "sector")
+    ##    __slots__ = ("grid", "dims", "sector")
 
     def __init__(self, grid: list[int] | None = None, dims: int = 9) -> None:
         self.dims = dims
@@ -156,7 +153,7 @@ class Sudoku:
         return f"{self.__class__.__name__}([\n{text}\n])"
 
     def __str__(self) -> str:
-        "Get text representation of Sudoku grid"
+        "Get text representation of Sudoku grid."
         text = ""
         for column in range(self.dims):
             row_sect = []
@@ -168,45 +165,37 @@ class Sudoku:
                 row_sect.append(" ".join(row_line))
             if column and not column % self.sector:
                 # Get vertical sector separation
-                text = "".join(
-                    (text, ("-" * 6), "+", ("-" * 7), "+", ("-" * 6), "\n")
-                )
+                text = "".join((text, ("-" * 6), "+", ("-" * 7), "+", ("-" * 6), "\n"))
             text = "".join((text, " | ".join(row_sect), "\n"))
         return text[:-1]
 
-    def get_sector(
-        self, row: int, col: int
-    ) -> np.ndarray[tuple[int, int], Int8]:
-        "Get 3x3 sector box"
+    def get_sector(self, row: int, col: int) -> np.ndarray[tuple[int, int], Int8]:
+        "Get 3x3 sector box."
         return self.grid[
             col * self.sector : (col + 1) * 3,
             row * self.sector : (row + 1) * self.sector,
         ]
 
     def get_row(self, column: int) -> Line:
-        "Get row"
+        "Get row."
         return self.grid[column, :]
 
     def get_column(self, row: int) -> Line:
-        "Get column"
+        "Get column."
         return self.grid[:, row]
 
     def get_possible(self, row: int, col: int) -> set[int]:
-        "Return a set of all possibilities for blank square given index"
+        "Return a set of all possibilities for blank square given index."
         if self.grid[col, row]:  # If not blank
-            return set((self.grid[col, row],))
+            return {self.grid[col, row]}
         miss_row = get_missing(self.get_row(col))
         miss_col = get_missing(self.get_column(row))
-        miss_sector = get_missing(
-            self.get_sector(*grid_to_sector(row, col, self.sector))
-        )
+        miss_sector = get_missing(self.get_sector(*grid_to_sector(row, col, self.sector)))
         # Return where possible in row, column, and sector all at once
         return miss_row & miss_col & miss_sector
 
-    def hidden_single_search(
-        self, possible: dict[int, set[int]]
-    ) -> Generator[tuple[int, set[int]], None, None]:
-        """Search for hidden singles and yield indexes that cannot be possibilities"""
+    def hidden_single_search(self, possible: dict[int, set[int]]) -> Generator[tuple[int, set[int]], None, None]:
+        """Search for hidden singles and yield indexes that cannot be possibilities."""
         for index, valid in possible.items():
             for area in get_related_areas(index, self.sector):
                 mutated_valid = set(valid)
@@ -235,7 +224,7 @@ class Sudoku:
     ##                poss_idx_by_zone[zone].add(index)
     ##        for zone in range(2, 5):
     ##            zone_indexes = poss_idx_by_zone.get(zone, set())
-    ##            # If not enough of type, not worth continueing
+    ##            # If not enough of type, not worth continuing
     ##            if len(zone_indexes) < zone:
     ##                continue
     ##            for index in zone_indexes:
@@ -243,13 +232,13 @@ class Sudoku:
     ##                for area in get_related_areas(index, self.sector):
     ##                    matching = set()
     ##                    for index_in_area in area & zone_indexes:
-    ##                        # See if it's possiblities match ours
+    ##                        # See if it's possibilities match ours
     ##                        if possible[index_in_area] == at_index:
     ##                            matching.add(index_in_area)
     ##                    # We must have exactly zone number of matches
     ##                    if len(matching) != zone:
     ##                        continue
-    ##                    # possibilites are mutually excusive between matches in this area
+    ##                    # possibilities are mutually excusive between matches in this area
     ##                    for index_in_area in area - matching:
     ##                        if index_in_area not in possible:
     ##                            continue
@@ -258,23 +247,21 @@ class Sudoku:
     ##                            continue
     ##                        yield index_in_area, bad
 
-    def pair_search(
-        self, possible: dict[int, set[int]]
-    ) -> Generator[tuple[int, set[int]], None, None]:
-        """Search for pairs and yield indexes that cannot be possibilities"""
+    def pair_search(self, possible: dict[int, set[int]]) -> Generator[tuple[int, set[int]], None, None]:
+        """Search for pairs and yield indexes that cannot be possibilities."""
         zone_indexes = {k for k, v in possible.items() if len(v) == 2}
         for index in zone_indexes:
             at_index = possible[index]
             for area in get_related_areas(index, self.sector):
                 matching = set()
                 for index_in_area in area & zone_indexes:
-                    # See if it's possiblities match ours
+                    # See if it's possibilities match ours
                     if possible[index_in_area] == at_index:
                         matching.add(index_in_area)
                 # We must have exactly zone number of matches
                 if len(matching) != 2:
                     continue
-                # possibilites are mutually excusive between matches in this area
+                # possibilities are mutually excusive between matches in this area
                 for index_in_area in area - matching:
                     if index_in_area not in possible:
                         continue
@@ -294,7 +281,7 @@ class Sudoku:
     ##                for k, v in possible.items()
     ##                if len(v) <= zone and len(v) >= 2
     ##            }
-    ##            # If not enough of type, not worth continueing
+    ##            # If not enough of type, not worth continuing
     ##            if len(zone_indexes) < zone:
     ##                continue
     ##            for index in zone_indexes:
@@ -320,7 +307,7 @@ class Sudoku:
     ##                            continue
     ##                        perm_set = set(permutation)
     ##
-    ##                        # possibilites are mutually excusive between
+    ##                        # possibilities are mutually excusive between
     ##                        # matches in this area
     ##                        for index_in_area in area - perm_set:
     ##                            if index_in_area not in possible:
@@ -330,13 +317,11 @@ class Sudoku:
     ##                                continue
     ##                            yield index_in_area, bad
 
-    def triplet_search(
-        self, possible: dict[int, set[int]]
-    ) -> Generator[tuple[int, set[int]], None, None]:
-        """Search for pairs and yield indexes that cannot be possibilities"""
+    def triplet_search(self, possible: dict[int, set[int]]) -> Generator[tuple[int, set[int]], None, None]:
+        """Search for pairs and yield indexes that cannot be possibilities."""
         set_possible = set(possible)
         for point, need_relate in possible.items():
-            # Need at least 2 possibilites to be related
+            # Need at least 2 possibilities to be related
             if len(need_relate) < 2:
                 continue
             # For each group point is in
@@ -391,11 +376,9 @@ class Sudoku:
     ##                continue
     ##                yield
 
-    def x_wing_search(
-        self, possible: dict[int, set[int]]
-    ) -> tuple[set[int], set[int]]:
-        """Preform an X Wing search and yield indexes that cannot be possibilities"""
-        poss_set = set(k for k, v in possible.items() if len(v) == 2)
+    def x_wing_search(self, possible: dict[int, set[int]]) -> tuple[set[int], set[int]]:
+        """Perform an X Wing search and yield indexes that cannot be possibilities."""
+        poss_set = {k for k, v in possible.items() if len(v) == 2}
         part: tuple[dict[int, list[int]], dict[int, list[int]]] = (
             {i: [] for i in range(self.dims)},
             {i: [] for i in range(self.dims)},
@@ -410,7 +393,7 @@ class Sudoku:
             1: [],
         }
         for which in range(2):
-            for no, poss in part[which].items():
+            for _no, poss in part[which].items():
                 if len(poss) < 2:
                     continue
                 num_count = {i + 1: 0 for i in range(self.dims)}
@@ -463,12 +446,10 @@ class Sudoku:
                     return remove, {entry[0]}
         return set(), set()
 
-    def xy_wing_search(
-        self, possible: dict[int, set[int]]
-    ) -> Generator[tuple[set[int], set[int]], None, None]:
-        "Preform an XY Wing search and yield indexes that cannot be possibilities"
+    def xy_wing_search(self, possible: dict[int, set[int]]) -> Generator[tuple[set[int], set[int]], None, None]:
+        "Perform an XY Wing search and yield indexes that cannot be possibilities."
         # All 2 pair possible
-        poss_set = set(k for k, v in possible.items() if len(v) == 2)
+        poss_set = {k for k, v in possible.items() if len(v) == 2}
         for x in poss_set:  # For every possible x wing
             x_related = get_related(x, self.sector)
             # For each index related to x & also a potential wing
@@ -480,9 +461,7 @@ class Sudoku:
                 # only have 2 possibilities
                 if len(y_poss) != 2:
                     continue
-                pivot_related = (
-                    get_related(pivot, self.sector) & poss_set - x_related
-                )
+                pivot_related = get_related(pivot, self.sector) & poss_set - x_related
                 # y is everything related to pivot but not x, pivot is connecting
                 for y in pivot_related:
                     # Must match
@@ -502,13 +481,11 @@ class Sudoku:
         self,
         positions: Iterable[int],
     ) -> Generator[tuple[tuple[int, int], int], None, None]:
-        "Solve positions generator. Yields (row, column), value"
+        "Solve positions generator. Yields (row, column), value."
         missing = deque(positions)
         possibilities: dict[int, set[int]] = {}
         for index in missing:
-            possibilities[index] = self.get_possible(
-                *flat_to_grid(index, self.dims)
-            )
+            possibilities[index] = self.get_possible(*flat_to_grid(index, self.dims))
 
         times_left = len(missing)
         while missing:
@@ -581,25 +558,19 @@ class Sudoku:
                 times_left -= 1
                 if times_left == 1:
                     for index in missing:
-                        possibilities[index] = self.get_possible(
-                            *flat_to_grid(index, self.dims)
-                        )
-                if (
-                    not times_left
-                ):  # If have already visited all without solution, not solvable
+                        possibilities[index] = self.get_possible(*flat_to_grid(index, self.dims))
+                if not times_left:  # If have already visited all without solution, not solvable
                     copy = {k: repr(v) for k, v in possibilities.items()}
                     print(json.dumps(copy, indent=2))
                     raise RuntimeError("Sudoku is impossible to solve")
             # print(f'{times_left = }')
 
     def get_missing(self) -> tuple[int, ...]:
-        "Get indexes of zero positions, which are unsolved"
-        return tuple(
-            np.asarray(self.grid.flatten() == 0).nonzero()[0].tolist()
-        )
+        "Get indexes of zero positions, which are unsolved."
+        return tuple(np.asarray(self.grid.flatten() == 0).nonzero()[0].tolist())
 
     def solve(self) -> None:
-        """Solve puzzle *IN PLACE*"""
+        """Solve puzzle *IN PLACE*."""
         missing = self.get_missing()
 
         # Use generator to complete missing
@@ -609,7 +580,7 @@ class Sudoku:
 
 
 def run() -> None:
-    "Run test of module"
+    "Run test of module."
     _ = 0  # Easier to see known grid
     ##    puzzle = Sudoku([
     ##        _,_,_,  _,_,_,  _,_,_,
