@@ -13,83 +13,90 @@ __version__ = "0.0.0"
 from typing import Any
 
 from component import Component, ComponentManager, Event
-from location import Location
 from pygame import mask
 from pygame.color import Color
 from pygame.rect import Rect
 from pygame.sprite import DirtySprite, LayeredDirty, LayeredUpdates
 from pygame.surface import Surface
+from vector import Vector2
 
 
 class Sprite(DirtySprite, ComponentManager):
     "Both Dirty Sprite and Component Manager."
-    __slots__ = ("__location", "rect")
+    __slots__ = ("rect", "update_location_on_resize")
 
     def __init__(self, name: str) -> None:
-        DirtySprite.__init__(self)
         ComponentManager.__init__(self, name)
+        DirtySprite.__init__(self)
 
         self.rect = Rect(0, 0, 0, 0)
-        self.__location: Location = Location(self.rect)
 
-    def __get_location(self) -> Location:
-        return self.__location
+        self.update_location_on_resize = False
+
+    def __get_location(self) -> Vector2:
+        """Return rect center as new Vector2."""
+        return Vector2.from_iter(self.rect.center)
 
     def __set_location(self, value: tuple[int, int]) -> None:
-        self.__location.x = value[0]
-        self.__location.y = value[1]
+        """Set rect center from tuple of integers."""
+        self.rect.center = value
 
-    location = property(__get_location, __set_location, doc="Location")
+    location = property(
+        __get_location,
+        __set_location,
+        doc="Location (Center of image)",
+    )
 
-    def __get_image_dims(self) -> tuple[int, int]:
-        "Return size of internal rectangle."
+    def _get_image_size(self) -> tuple[int, int]:
+        """Return size of internal rectangle."""
         return self.rect.size
 
-    def __set_image_dims(self, value: tuple[int, int]) -> None:
-        "Set internal rectangle size while keeping self.location intact."
-        prev_size = self.rect.size
-        pre_loc = self.location.conv_ints()
+    def _set_image_size(self, value: tuple[int, int]) -> None:
+        """Set internal rectangle size while keeping self.location intact."""
+        pre_loc = self.location
         self.rect.size = value
+        if self.update_location_on_resize:
+            self.location = pre_loc
 
-        if self.rect.center == pre_loc:
-            return
-
-        tuple(self.rect.center - pre_loc)
-
-        self.location = pre_loc
-
-        if prev_size == (0, 0) or self.rect.size == (0, 0):
-            return
-
-    image_dims = property(__get_image_dims, __set_image_dims, doc="Image dimensions")
+    image_size = property(
+        _get_image_size,
+        _set_image_size,
+        doc="Image Size (Automattically updates location if self.update_location_on_resize is set)",
+    )
 
     def __get_image(self) -> Surface | None:
-        "Return surface of this sprite."
+        """Return the surface of this sprite."""
         return self.__image
 
     def __set_image(self, image: Surface | None) -> None:
-        "Set surface and update image_dims."
+        """Set surface, update image dimensions, and set dirty bit."""
         self.__image = image
         if image is not None:
-            self.image_dims = image.get_size()
+            self.image_size = image.get_size()
         self.dirty = 1
 
     image = property(
         __get_image,
         __set_image,
-        doc="Image property auto-updating dimensions.",
+        doc="Image property auto-updating dimensions and setting dirty bit.",
     )
 
     ##### Extra
     def is_selected(self, position: tuple[int, int]) -> bool:
-        "Return True if visible, collision with point, and topmost at point."
+        """Return True if visible and collision with point."""
         if not self.visible:
             return False
         if not self.rect.collidepoint(position):
             return False
+        return True
 
+    def is_topmost(self, position: tuple[int, int]) -> bool:
+        """Return True if topmost at point in any group this sprite is in."""
         for group in self.groups():
-            assert isinstance(group, LayeredUpdates), "Group must have get_sprites_at"
+            assert isinstance(
+                group,
+                LayeredUpdates,
+            ), "Group must have get_sprites_at"
             sprites_at = group.get_sprites_at(position)
             if not sprites_at:
                 continue
@@ -142,7 +149,7 @@ class Click(Component):
         "Handle mouse down events."
         if self.manager is None:
             return
-        if self.manager.is_selected(event["pos"]):
+        if self.manager.is_selected(event["pos"]) and self.manager.is_topmost(event["pos"]):
             self.selected = True
             await self.manager(Event("click", event))
         elif self.selected:

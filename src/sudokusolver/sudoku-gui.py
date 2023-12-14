@@ -7,9 +7,11 @@
 # Programmed by CoolCat467
 from __future__ import annotations
 
+import contextlib
+import platform
 from collections import deque
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import pygame
 import sprite
@@ -17,7 +19,7 @@ import trio
 from async_clock import Clock
 from component import Component, ComponentManager, Event
 from pygame.color import Color
-from pygame.locals import K_ESCAPE, QUIT
+from pygame.locals import K_ESCAPE, KEYUP, QUIT, WINDOWRESIZED
 from pygame.surface import Surface
 from sudoku import Sudoku, grid_to_flat
 from vector import Vector2
@@ -33,14 +35,16 @@ __ver_minor__ = 0
 __ver_patch__ = 0
 
 SCREENSIZE = Vector2(800, 600)
-FPS = 30
+FPS = 48
 VSYNC = True
 
 TILE_SIZE = 50
 TILE_SEP = 4
-DATA_FOLDER = Path(__file__).parent / "data"
+DATA_FOLDER: Final = Path(__file__).parent / "data"
 FONT_FILENAME = DATA_FOLDER / "BookmanOldStyle.ttf"
 FONT_SIZE = 60
+
+IS_WINDOWS: Final = platform.system() == "Windows"
 
 
 class MrFloppy(sprite.Sprite):
@@ -165,17 +169,13 @@ class Grid(Sudoku, ComponentManager):
         "Add tiles."
         start_x = 150
         start_y = 50
-        size = TILE_SIZE + TILE_SEP
-        location = Vector2(start_x, start_y)
+        size = round(TILE_SIZE + TILE_SEP)
         for y in range(self.dims):
-            location.x = start_x
             for x in range(self.dims):
                 pos = grid_to_flat(x, y, self.dims)
                 tile = Tile(pos)
-                tile.location = location
+                tile.location = Vector2(start_x + size * x, start_y + size * y)
                 self.add_component(tile)
-                location.x += size
-            location.y += size
 
     async def handle_init(self, event: Event[Any]) -> None:
         "Add all sprites to manager."
@@ -351,13 +351,14 @@ class Client(sprite.Group):
         await super().__call__(event)
 
 
-def as_component_event(event: pygame.event.Event) -> Event[str]:
+def convert_pygame_event(event: pygame.event.Event) -> Event[str]:
     "Convert pygame event to component event."
     return Event(pygame.event.event_name(event.type), event.dict)
 
 
 async def async_run() -> None:
     "Start program."
+    global SCREEN_SIZE
     # Set up the screen
     screen = pygame.display.set_mode(tuple(SCREENSIZE), 0, 16, vsync=VSYNC)
     pygame.display.set_caption(f"{__title__} v{__version__}")
@@ -472,14 +473,21 @@ async def async_run() -> None:
     # While the game is active
     while running:
         # Event handler
-        async with trio.open_nursery() as nursery:
+        async with trio.open_nursery() as event_nursery:
             for event in pygame.event.get():
                 if event.type == QUIT:
                     running = False
-                nursery.start_soon(group, as_component_event(event))
-
-        # Get the time passed from the FPS clock
-        time_passed = await clock.tick(FPS)
+                elif event.type == KEYUP and event.key == K_ESCAPE:
+                    pygame.event.post(pygame.event.Event(QUIT))
+                elif event.type == WINDOWRESIZED:
+                    SCREEN_SIZE = (event.x, event.y)
+                sprite_event = convert_pygame_event(event)
+                # print(sprite_event)
+                event_nursery.start_soon(
+                    group,
+                    sprite_event,
+                )
+            event_nursery.start_soon(clock.tick, FPS)
 
         # Update the display
         rects = group.draw(screen)
@@ -488,19 +496,30 @@ async def async_run() -> None:
         await group(
             Event(
                 "tick",
-                time_passed=time_passed / 1000,
+                time_passed=clock.get_time() / 1e9,  # nanoseconds -> seconds
                 fps=clock.get_fps(),
             ),
         )
 
 
 def run() -> None:
-    "Synchronous entry point."
+    """Start asynchronous run."""
     trio.run(async_run)
 
 
 if __name__ == "__main__":
     print(f"{__title__} v{__version__}\nProgrammed by {__author__}.\n")
+
+    # If we're not imported as a module, run.
+    # Make sure the game will display correctly on high DPI monitors on Windows.
+
+    if IS_WINDOWS:
+        from ctypes import windll  # type: ignore
+
+        with contextlib.suppress(AttributeError):
+            windll.user32.SetProcessDPIAware()
+        del windll
+
     try:
         pygame.init()
         run()
