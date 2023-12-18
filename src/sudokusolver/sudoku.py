@@ -1,11 +1,9 @@
-#!/usr/bin/env python3
-# Sudoku Solver - Solve Sudoku puzzles with wave function collapse
-
-"Sudoku Solver."
+"""Sudoku Solver - Solve Sudoku puzzles with wave function collapse."""
 
 # https://www.learn-sudoku.com/basic-techniques.html
 
 # Programmed by CoolCat467
+
 from __future__ import annotations
 
 __title__ = "Sudoku Solver"
@@ -31,42 +29,43 @@ Line = np.ndarray[int, Int8]
 
 
 def get_missing(line: Container[int]) -> set[int]:
-    "Return all missing numbers from line."
+    """Return all missing numbers from line."""
     return {x for x in range(1, 10) if x not in line}
 
 
 def flat_to_grid(index: int, dims: int = 9) -> tuple[int, int]:
-    "Return grid index of given flat index."
+    """Return grid index of given flat index."""
     col, row = divmod(index, dims)
     return row, col
 
 
 def grid_to_sector(row: int, col: int, sector_size: int = 3) -> tuple[int, int]:
-    "Return sector that contains given grid index."
+    """Return sector that contains given grid index."""
     return (row // sector_size, col // sector_size)
 
 
 def grid_to_flat(row: int, col: int, dims: int = 9) -> int:
-    "Get flat index from grid index."
+    """Get flat index from grid index."""
     return col * dims + row
 
 
 ##def grid_to_sector_index(sector_row: int, sector_col: int, sector_size: int=3) -> int:
-##    "Return sector index given the sector row and column"
+##    """Return sector index given the sector row and column"""
 ##    return sector_row * sector_size + sector_col
 
 
 def row_indexes(column: int, dims: int = 9) -> set[int]:
-    "Get row indexes from column."
+    """Get row indexes from column."""
     return set(range(column * dims, (column + 1) * dims))
 
 
 def column_indexes(row: int, dims: int = 9) -> set[int]:
-    "Get column indexes from row."
+    """Get column indexes from row."""
     return set(range(row, dims * dims, dims))
 
 
 def show_indexes(indexes: Iterable[int]) -> None:
+    """Display grid indexes."""
     grid = Sudoku()
     for index in indexes:
         row, col = flat_to_grid(index)
@@ -75,7 +74,7 @@ def show_indexes(indexes: Iterable[int]) -> None:
 
 
 def sector_indexes(sector_row: int, sector_col: int, sector_size: int = 3) -> set[int]:
-    "Get sector indexes from sector number."
+    """Get sector indexes from sector number."""
     dims = sector_size * sector_size
 
     indexes = set()
@@ -124,11 +123,12 @@ def get_related(index: int, sector_size: int = 3) -> set[int]:
 
 
 class Sudoku:
-    "Represents Sudoku Grid."
+    """Represents Sudoku Grid."""
 
     ##    __slots__ = ("grid", "dims", "sector")
 
     def __init__(self, grid: list[int] | None = None, dims: int = 9) -> None:
+        """Initialize sudoku grid."""
         self.dims = dims
         self.sector = ceil(sqrt(self.dims))
         if grid is None:
@@ -136,6 +136,7 @@ class Sudoku:
         self.grid = np.array(grid, np.int8).reshape((9, 9))
 
     def __repr__(self) -> str:
+        """Return representation of self."""
         text = ""
         for column in range(self.dims):
             row_sect = []
@@ -153,7 +154,7 @@ class Sudoku:
         return f"{self.__class__.__name__}([\n{text}\n])"
 
     def __str__(self) -> str:
-        "Get text representation of Sudoku grid."
+        """Return text representation of Sudoku grid."""
         text = ""
         for column in range(self.dims):
             row_sect = []
@@ -170,22 +171,22 @@ class Sudoku:
         return text[:-1]
 
     def get_sector(self, row: int, col: int) -> np.ndarray[tuple[int, int], Int8]:
-        "Get 3x3 sector box."
+        """Return 3x3 sector box."""
         return self.grid[
             col * self.sector : (col + 1) * 3,
             row * self.sector : (row + 1) * self.sector,
         ]
 
     def get_row(self, column: int) -> Line:
-        "Get row."
+        """Return row."""
         return self.grid[column, :]
 
     def get_column(self, row: int) -> Line:
-        "Get column."
+        """Return column."""
         return self.grid[:, row]
 
     def get_possible(self, row: int, col: int) -> set[int]:
-        "Return a set of all possibilities for blank square given index."
+        """Return a set of all possibilities for blank square given index."""
         if self.grid[col, row]:  # If not blank
             return {self.grid[col, row]}
         miss_row = get_missing(self.get_row(col))
@@ -361,8 +362,6 @@ class Sudoku:
                                     yield item, perm_unknown
                                 continue
                 # print(f"{connected = }\t{all_unknown = }")
-        if False:
-            yield
 
     ##    def omission_search(
     ##        self, possible: dict[int, set[int]]
@@ -447,7 +446,7 @@ class Sudoku:
         return set(), set()
 
     def xy_wing_search(self, possible: dict[int, set[int]]) -> Generator[tuple[set[int], set[int]], None, None]:
-        "Perform an XY Wing search and yield indexes that cannot be possibilities."
+        """Perform an XY Wing search and yield indexes that cannot be possibilities."""
         # All 2 pair possible
         poss_set = {k for k, v in possible.items() if len(v) == 2}
         for x in poss_set:  # For every possible x wing
@@ -481,7 +480,7 @@ class Sudoku:
         self,
         positions: Iterable[int],
     ) -> Generator[tuple[tuple[int, int], int], None, None]:
-        "Solve positions generator. Yields (row, column), value."
+        """Solve positions generator. Yield (row, column), value."""
         missing = deque(positions)
         possibilities: dict[int, set[int]] = {}
         for index in missing:
@@ -566,7 +565,7 @@ class Sudoku:
             # print(f'{times_left = }')
 
     def get_missing(self) -> tuple[int, ...]:
-        "Get indexes of zero positions, which are unsolved."
+        """Get indexes of zero positions, which are unsolved."""
         return tuple(np.asarray(self.grid.flatten() == 0).nonzero()[0].tolist())
 
     def solve(self) -> None:
@@ -580,7 +579,7 @@ class Sudoku:
 
 
 def run() -> None:
-    "Run test of module."
+    """Run test of module."""
     _ = 0  # Easier to see known grid
     # fmt: off
     ##    puzzle = Sudoku([
@@ -607,6 +606,19 @@ def run() -> None:
         8, _, _, 7, _, 2, _, _, 4,
         5, _, _, _, 4, _, _, _, 2,
     ])
+    ##    puzzle = Sudoku([
+    ##        0,0,3, 8,0,0, 5,1,0,
+    ##        0,0,8, 7,0,0, 9,3,0,
+    ##        1,0,0, 3,0,5, 7,2,8,
+    ##        #------------------
+    ##        0,0,0, 2,0,0, 8,4,9,
+    ##        8,0,1, 9,0,6, 2,5,7,
+    ##        0,0,0, 5,0,0, 1,6,3,
+    ##        #------------------
+    ##        9,6,4, 1,2,7, 3,8,5,
+    ##        3,8,2, 6,5,9, 4,7,1,
+    ##        0,1,0, 4,0,0, 6,9,2
+    ##    ])
     ##    puzzle = Sudoku([
     ##        _,_,_,  5,_,8,  _,_,_,
     ##        5,_,_,  1,_,3,  _,_,9,
