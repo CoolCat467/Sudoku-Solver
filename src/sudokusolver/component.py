@@ -23,8 +23,7 @@ class Event(dict[str, T]):
     __slots__ = ("name",)
 
     @overload
-    def __init__(self, name: str, data: dict[str, T] | None = None, /, **kwargs: None) -> None:
-        ...
+    def __init__(self, name: str, data: dict[str, T] | None = None, /, **kwargs: None) -> None: ...
 
     @overload
     def __init__(
@@ -33,12 +32,10 @@ class Event(dict[str, T]):
         data: Iterable[tuple[str, T]] | None = None,
         /,
         **kwargs: None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
-    def __init__(self, name: str, data: None = None, /, **kwargs: T) -> None:
-        ...
+    def __init__(self, name: str, data: None = None, /, **kwargs: T) -> None: ...
 
     def __init__(
         self,
