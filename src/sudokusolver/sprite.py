@@ -2,10 +2,26 @@
 
 # Programmed by CoolCat467
 
+# Copyright (C) 2023  CoolCat467
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 from __future__ import annotations
 
 __title__ = "Sprite"
 __author__ = "CoolCat467"
+__license__ = "GNU General Public License Version 3"
 __version__ = "0.0.0"
 
 from typing import Any, cast
@@ -19,8 +35,8 @@ from pygame.surface import Surface
 from vector import Vector2
 
 
-class Sprite(WeakDirtySprite, ComponentManager):
-    """Both Dirty Sprite and Component Manager."""
+class Sprite(ComponentManager, WeakDirtySprite):
+    """Client dirty sprite component manager."""
 
     __slots__ = ("rect", "update_location_on_resize")
 
@@ -32,6 +48,10 @@ class Sprite(WeakDirtySprite, ComponentManager):
         self.rect = Rect(0, 0, 0, 0)
 
         self.update_location_on_resize = False
+
+    def __repr__(self) -> str:
+        """Return representation of self."""
+        return f"<{self.__class__.__name__} Sprite>"
 
     def __get_location(self) -> Vector2:
         """Return rect center as new Vector2."""
@@ -47,33 +67,23 @@ class Sprite(WeakDirtySprite, ComponentManager):
         doc="Location (Center of image)",
     )
 
-    def _get_image_size(self) -> tuple[int, int]:
-        """Return size of internal rectangle."""
-        return self.rect.size
-
-    def _set_image_size(self, value: tuple[int, int]) -> None:
-        """Set internal rectangle size while keeping self.location intact."""
-        pre_loc = self.location
-        self.rect.size = value
-        if self.update_location_on_resize:
-            self.location = pre_loc
-
-    image_size = property(
-        _get_image_size,
-        _set_image_size,
-        doc="Image Size (Automattically updates location if self.update_location_on_resize is set)",
-    )
-
     def __get_image(self) -> Surface | None:
         """Return the surface of this sprite."""
         return self.__image
 
     def __set_image(self, image: Surface | None) -> None:
-        """Set surface, update image dimensions, and set dirty bit."""
+        """Set surface, update image dimensions, and set dirty bit.
+
+        Automatically updates location if self.update_location_on_resize is set.
+        """
         self.__image = image
         if image is not None:
-            self.image_size = image.get_size()
-        self.dirty = 1
+            pre_loc = self.location
+            self.rect.size = image.get_size()
+            if self.update_location_on_resize:
+                self.location = pre_loc
+        if self.dirty == 0:
+            self.dirty = 1
 
     image = cast(
         Surface,
@@ -84,14 +94,12 @@ class Sprite(WeakDirtySprite, ComponentManager):
         ),
     )
 
-    ##### Extra
+    # Extra
     def is_selected(self, position: tuple[int, int]) -> bool:
         """Return True if visible and collision with point."""
         if not self.visible:
             return False
-        if not self.rect.collidepoint(position):
-            return False
-        return True
+        return self.rect.collidepoint(position)
 
     def is_topmost(self, position: tuple[int, int]) -> bool:
         """Return True if topmost at point in any group this sprite is in."""
@@ -103,9 +111,9 @@ class Sprite(WeakDirtySprite, ComponentManager):
             sprites_at = group.get_sprites_at(position)
             if not sprites_at:
                 continue
-            top = sprites_at[-1]
-            if top != self:
-                return False
+            for top in reversed(sprites_at):
+                if top != self and top.visible:
+                    return False
         return True
 
 
@@ -398,5 +406,5 @@ class DragOutline(Component):
         )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: nocover
     print(f"{__title__}\nProgrammed by {__author__}.\n")

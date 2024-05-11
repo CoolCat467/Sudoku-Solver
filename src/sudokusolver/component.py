@@ -2,10 +2,26 @@
 
 # Programmed by CoolCat467
 
+# Copyright (C) 2023-2024  CoolCat467
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 from __future__ import annotations
 
 __title__ = "Component"
 __author__ = "CoolCat467"
+__license__ = "GNU General Public License Version 3"
 __version__ = "0.0.0"
 
 import weakref
@@ -56,19 +72,19 @@ class Event(dict[str, T]):
 
     def __repr__(self) -> str:
         """Return representation of self."""
-        return f"Event({self.name!r}, {super().__repr__()})"
+        return f"{self.__class__.__name__}({self.name!r}, {super().__repr__()})"
 
 
 Handler = Callable[[Event[Any]], Awaitable[Any | None]]
 
 
 class Component:
-    """Base Component."""
+    """Component base class."""
 
     __slots__ = ("__name", "__manager", "__handlers")
 
     def __init__(self, name: str) -> None:
-        """Initialize Component."""
+        """Initialize with name."""
         self.__name = name
         # weakref.CallableProxyType does not support class getitem
         self.__manager: weakref.CallableProxyType[ComponentManager] | None = None
@@ -226,5 +242,5 @@ class ComponentManager(Component):
         return None
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: nocover
     print(f"{__title__}\nProgrammed by {__author__}.\n")
