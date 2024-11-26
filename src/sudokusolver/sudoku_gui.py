@@ -10,15 +10,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import pygame
-import sprite
 import trio
-from async_clock import Clock
-from component import Component, ComponentManager, Event
+from libcomponent.component import Component, ComponentManager, Event
 from pygame.color import Color
 from pygame.locals import K_ESCAPE, KEYUP, QUIT, WINDOWRESIZED
 from pygame.surface import Surface
-from sudoku import Sudoku, grid_to_flat
-from vector import Vector2
+
+from sudokusolver import sprite
+from sudokusolver.async_clock import Clock
+from sudokusolver.sudoku import Sudoku, grid_to_flat
+from sudokusolver.vector import Vector2
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -26,9 +27,6 @@ if TYPE_CHECKING:
 __title__ = "Sudoku-GUI"
 __author__ = "CoolCat467"
 __version__ = "0.0.0"
-__ver_major__ = 0
-__ver_minor__ = 0
-__ver_patch__ = 0
 
 SCREEN_SIZE = Vector2(800, 600)
 FPS = 48
@@ -78,7 +76,9 @@ class Timer(Component):
     def add_event(self, event_name: str, time: float) -> None:
         """Add an event that tick should remap to every <time> seconds."""
         if event_name in self.get_handled():
-            raise ValueError(f'Remapping "{event_name}" events would cause exponential growth')
+            raise ValueError(
+                f'Remapping "{event_name}" events would cause exponential growth',
+            )
         self.times[event_name] = time
         self.elapsed[event_name] = time
 
@@ -140,7 +140,9 @@ class Grid(Sudoku, ComponentManager):
         Sudoku.__init__(self, [0 for _ in range(81)], 9)
         ComponentManager.__init__(self, "grid")
 
-        self.solve_gen: Generator[tuple[tuple[int, int], int], None, None] | None = None
+        self.solve_gen: (
+            Generator[tuple[tuple[int, int], int], None, None] | None
+        ) = None
         self.outline_color = Color(255, 0, 0)
         self.outline_size = 2
 
@@ -342,28 +344,30 @@ class Button(sprite.Sprite):
         self.add_component(sprite.Click())
 
 
-class Client(sprite.Group):
+class Client(sprite.GroupProcessor):
     """Main Client."""
 
     __slots__ = ()
 
     def __init__(self) -> None:
         """Initialize Client."""
-        super().__init__("Client")
-        self.add_handler("KeyUp", self.handle_keyup)
+        super().__init__()
 
-    async def handle_keyup(self, event: Event[int]) -> str | None:
-        """Post quit event when escape key stops being pressed."""
-        if event["key"] == K_ESCAPE:
-            pygame.event.post(pygame.event.Event(pygame.QUIT))
-            return "break"
-        return None
 
-    async def __call__(self, event: Event[Any]) -> None:
-        """Raise event."""
-        ##        if event.name not in self.get_handled() and event.name not in {"tick"}:
-        ##            print(event)
-        await super().__call__(event)
+##        self.add_handler("KeyUp", self.handle_keyup)
+
+##    async def handle_keyup(self, event: Event[int]) -> str | None:
+##        """Post quit event when escape key stops being pressed."""
+##        if event["key"] == K_ESCAPE:
+##            pygame.event.post(pygame.event.Event(pygame.QUIT))
+##            return "break"
+##        return None
+##
+##    async def __call__(self, event: Event[Any]) -> None:
+##        """Raise event."""
+##        ##        if event.name not in self.get_handled() and event.name not in {"tick"}:
+##        ##            print(event)
+##        await super().raise_event(event)
 
 
 def convert_pygame_event(event: pygame.event.Event) -> Event[str]:
@@ -497,12 +501,8 @@ async def async_run() -> None:
         )
 
 
-def run() -> None:
+def cli_run() -> None:
     """Start asynchronous run."""
-    trio.run(async_run)
-
-
-if __name__ == "__main__":
     print(f"{__title__} v{__version__}\nProgrammed by {__author__}.\n")
 
     # If we're not imported as a module, run.
@@ -517,6 +517,10 @@ if __name__ == "__main__":
 
     try:
         pygame.init()
-        run()
+        trio.run(async_run)
     finally:
         pygame.quit()
+
+
+if __name__ == "__main__":
+    cli_run()

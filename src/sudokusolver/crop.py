@@ -2,7 +2,7 @@
 
 # Programmed by CoolCat467
 
-__title__ = "Crop"
+__title__ = "Crop Functions"
 __author__ = "CoolCat467"
 __version__ = "0.0.0"
 
@@ -46,5 +46,10 @@ def crop_color(surface: Surface, color: Color) -> Surface:
     return surf
 
 
+def run() -> None:
+    """Run test of module."""
+
+
 if __name__ == "__main__":
     print(f"{__title__}\nProgrammed by {__author__}.\n")
+    run()
