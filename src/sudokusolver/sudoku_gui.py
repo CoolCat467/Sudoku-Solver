@@ -216,7 +216,7 @@ class Grid(Sudoku, ComponentManager):
             location, value = next(self.solve_gen)
             row, col = location
         except StopIteration:
-            cast(Timer, self.component("timer")).remove_event("next_step")
+            cast("Timer", self.component("timer")).remove_event("next_step")
             await self(Event("solve_step", position=None, value=0))
             return
         await self(
