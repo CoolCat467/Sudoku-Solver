@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 # As a forward to the madness below, we are doing something incredibly sneeky.
 # We have BaseVector, which we want to have all of the shared functionality
 # of all Vector subclasses. We also want each Vector class to be a NamedTuple
-# so we can let Python handle storing data in the most efficiant way and
+# so we can let Python handle storing data in the most efficient way and
 # make Vectors immutable.
 #
 # Problem is, we can't have Vector classes be
@@ -66,11 +66,11 @@ class BaseVector:
     __slots__ = ()
 
     if TYPE_CHECKING:
-
         # D105 is 'Missing docstring in magic method', but this is to handle
         # typing issues
         def __iter__(self) -> Iterator[float]: ...  # noqa: D105
         def __getitem__(self, value: int) -> float: ...  # noqa: D105
+        def __len__(self) -> int: ...  # noqa: D105
 
     @classmethod
     def from_iter(cls: type[Self], iterable: Iterable[float]) -> Self:

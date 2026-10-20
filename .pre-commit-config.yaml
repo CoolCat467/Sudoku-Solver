@@ -1,10 +1,8 @@
 ci:
-  autofix_commit_msg: "[pre-commit.ci] auto fixes from pre-commit.com hooks"
   autofix_prs: true
-  autoupdate_commit_msg: "[pre-commit.ci] pre-commit autoupdate"
   autoupdate_schedule: quarterly
-  skip: [badgie]
   submodules: false
+  skip: [badgie]
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -20,23 +18,14 @@ repos:
       - id: check-case-conflict
       - id: sort-simple-yaml
         files: .pre-commit-config.yaml
-  - repo: https://github.com/hadialqattan/pycln
-    rev: v2.6.0 # must match pyproject.toml
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.1
     hooks:
-      - id: pycln
-        args: [--config=pyproject.toml, src]
+      - id: ruff-format
+      - id: ruff-check
         types: [file]
         types_or: [python, pyi]
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 26.10.0
-    hooks:
-      - id: black
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.10
-    hooks:
-      - id: ruff
-        types: [file]
-        types_or: [python, pyi, toml]
+        args: ["--show-fixes"]
   - repo: https://github.com/CoolCat467/badgie
     rev: v0.9.6
     hooks:
@@ -47,3 +36,7 @@ repos:
       - id: codespell
         additional_dependencies:
           - tomli
+  - repo: https://github.com/adhtruong/mirrors-typos
+    rev: v1.51.1
+    hooks:
+      - id: typos

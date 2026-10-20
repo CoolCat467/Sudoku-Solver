@@ -25,21 +25,30 @@ __license__ = "GNU General Public License Version 3"
 __version__ = "0.0.0"
 
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, TypedDict, cast
+from weakref import WeakKeyDictionary
 
 import trio
 from libcomponent.component import Component, ComponentManager, Event
 from pygame.color import Color
 from pygame.event import Event as PygameEvent, event_name
 from pygame.mask import Mask, from_surface as mask_from_surface
-from pygame.rect import Rect
-from pygame.sprite import LayeredDirty, LayeredUpdates, WeakDirtySprite
+from pygame.rect import FRect, Rect
+from pygame.sprite import (
+    AbstractGroup,
+    DirtySprite,
+    LayeredDirty,
+    LayeredUpdates,
+    Sprite as PygameSprite,
+)
 from pygame.surface import Surface
 
 from sudokusolver.statemachine import AsyncStateMachine
 from sudokusolver.vector import Vector2
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable, Iterator, Mapping
+
+    from typing_extensions import Self
 
 
 class TickEventData(NamedTuple):
@@ -70,6 +79,32 @@ class PygameMouseMotion(PygameMouseEventData):
     buttons: tuple[int, int, int]
 
 
+class WeakSprite(PygameSprite):
+    """A subclass of Sprite that references its Groups weakly.
+
+    This means that any group this belongs to that is not referenced
+    anywhere else is garbage collected automatically.
+    """
+
+    __slots__ = ()
+
+    def __init__(self, *groups: AbstractGroup[Self]) -> None:
+        """Initialize weak sprite."""
+        super().__init__(*groups)
+        self.__dict__["_Sprite__g"] = WeakKeyDictionary(
+            self.__dict__["_Sprite__g"],
+        )
+
+
+class WeakDirtySprite(WeakSprite, DirtySprite):
+    """A subclass of WeakSprite and DirtySprite.
+
+    Combines the benefits of both classes.
+    """
+
+    __slots__ = ()
+
+
 class Sprite(ComponentManager, WeakDirtySprite):
     """Client sprite component."""
 
@@ -81,6 +116,7 @@ class Sprite(ComponentManager, WeakDirtySprite):
         WeakDirtySprite.__init__(self)
 
         self.__image: Surface | None = None
+        self.dirty = 0
         self.visible = False
         self.mask: Mask | None = None
         self.rect: Rect = Rect(0, 0, 0, 0)
@@ -99,13 +135,9 @@ class Sprite(ComponentManager, WeakDirtySprite):
         """Set rect center from tuple of integers."""
         self.rect.center = value
 
-    def __set_location(self, value: tuple[int, int]) -> None:
-        """Set rect center from tuple of integers."""
-        self._set_location(value)
-
     location = property(
         __get_location,
-        __set_location,
+        _set_location,
         doc="Location (Center of image)",
     )
 
@@ -223,7 +255,10 @@ class ImageComponent(ComponentManager):
             mask = surface
         self.add_image_and_mask(identifier, surface, mask)
 
-    def add_images(self, images: dict[int | str, Surface | int | str]) -> None:
+    def add_images(
+        self,
+        images: Mapping[int | str, Surface | int | str],
+    ) -> None:
         """Add images to internal database."""
         for ident, surf in images.items():
             self.add_image(ident, surf)
@@ -253,7 +288,7 @@ class ImageComponent(ComponentManager):
         while True:
             if not self.image_exists(identifier):
                 raise ValueError(
-                    f'No image saved for identifier "{identifier}"',
+                    f'No mask saved for identifier "{identifier}"',
                 )
             mask = self.__masks[identifier]
             if isinstance(mask, Mask):
@@ -325,7 +360,7 @@ class OutlineComponent(Component):
         assert manager.set_surface is not None
         manager.set_image(manager.set_surface)
 
-    def get_outline_discriptor(self, identifier: str | int) -> str:
+    def get_outline_descriptor(self, identifier: str | int) -> str:
         """Return outlined identifier for given original identifier."""
         color = "_".join(map(str, self.__color))
         return f"{identifier}{self.mod}{color}_{self.size}"
@@ -334,7 +369,7 @@ class OutlineComponent(Component):
         """Save outlined version of given identifier image."""
         manager = cast("ImageComponent", self.manager)
 
-        outlined = self.get_outline_discriptor(identifier)
+        outlined = self.get_outline_descriptor(identifier)
         if manager.image_exists(outlined):
             return
 
@@ -367,7 +402,7 @@ class OutlineComponent(Component):
     def get_outline(self, identifier: str | int) -> str:
         """Return saved outline effect identifier."""
         self.save_outline(identifier)
-        return self.get_outline_discriptor(identifier)
+        return self.get_outline_descriptor(identifier)
 
     def precalculate_outline(
         self,
@@ -573,13 +608,14 @@ class TargetingComponent(Component):
             return
 
         to_destination = self.to_destination()
-        travel_distance = min(
-            to_destination @ to_destination,
-            movement.speed * time_passed,
-        )
+        travel_distance = movement.speed * time_passed
 
         if travel_distance > 0:
-            movement.move_heading_distance(travel_distance)
+            dest_magnitude = to_destination.magnitude()
+            if travel_distance > dest_magnitude:
+                sprite.location = self.destination
+            else:
+                movement.move_heading_distance(travel_distance)
         # Fix imprecision
         self.update_heading()
         await trio.lowlevel.checkpoint()
@@ -768,14 +804,14 @@ class GroupProcessor(AsyncStateMachine):
             del self.group_names[named]
         return None
 
-    def draw(self, screen: Surface) -> list[Rect]:
+    def draw(self, screen: Surface) -> list[Rect | FRect]:
         """Draw all groups."""
         rects = []
         for group in self.groups.values():
             rects.extend(group.draw(screen))
         return rects
 
-    def repaint_rect(self, screen_rect: Rect) -> None:
+    def repaint_rect(self, screen_rect: Rect | FRect) -> None:
         """Repaint rect for all groups."""
         for group in self.groups.values():
             group.repaint_rect(screen_rect)
@@ -785,12 +821,14 @@ class GroupProcessor(AsyncStateMachine):
         for group_id in tuple(self.groups):
             self.remove_group(group_id)
 
-    def __del__(self) -> None:
+    def __del__(self) -> None:  # pragma: nocover
         """Clear groups."""
         self.clear_groups()
 
 
-def convert_pygame_event(event: PygameEvent) -> Event[Any]:
+def convert_pygame_event(
+    event: PygameEvent,
+) -> Event[dict[str, Any]]:  # pragma: nocover
     """Convert Pygame Event to Component Event."""
     # data = event.dict
     # data['type_int'] = event.type
