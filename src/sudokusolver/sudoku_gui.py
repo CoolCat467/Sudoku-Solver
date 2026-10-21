@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 import pygame
 import trio
+from libcomponent.async_clock import Clock
 from libcomponent.component import (
     Component,
     ComponentManager,
@@ -40,7 +41,6 @@ from pygame.rect import FRect, Rect
 from pygame.surface import Surface
 
 from sudokusolver import sprite
-from sudokusolver.async_clock import Clock
 from sudokusolver.statemachine import AsyncState
 from sudokusolver.sudoku import CSPSudoku, grid_to_flat
 from sudokusolver.vector import Vector2
