@@ -815,6 +815,7 @@ def cli_run() -> None:
         pygame.init()
         trio.run(async_run)
     ##except ExceptionGroup as exc:
+    ##    import traceback
     ##    traceback.print_exception(exc)
     finally:
         pygame.quit()

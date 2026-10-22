@@ -741,11 +741,18 @@ class CSPSudoku(Sudoku):
         ##        print(f"{csp = }")
 
         # Solve CSP
-        result = csp.backtrace_search()
+        ##        result = csp.backtrace_search()
 
-        if result is None:
-            raise RuntimeError("Sudoku is impossible to solve")
-        yield from result.items()
+        ##        if result is None:
+        ##            raise RuntimeError("Sudoku is impossible to solve")
+        ##        yield from result.items()
+        generator = csp.backtrace_generator_search(0)
+        try:
+            while True:
+                yield next(generator)
+        except StopIteration as exc:
+            if exc.value is None:
+                raise RuntimeError("Sudoku is impossible to solve") from exc
 
     def solve(self) -> None:
         """Solve sudoku *IN-PLACE*."""

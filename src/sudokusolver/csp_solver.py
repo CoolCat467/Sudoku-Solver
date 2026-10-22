@@ -60,6 +60,29 @@ def parse_constraint(
     return (one, two), get_compare_function(op)
 
 
+def get_constraint_dict_from_strings(
+    lines: Iterable[str],
+) -> dict[tuple[str, str], Constraint[T]]:
+    """Return constraint dictionary from iterable of constraint strings."""
+    parse_fn: Callable[[str], tuple[tuple[str, str], Constraint[T]]] = (
+        parse_constraint
+    )
+    return dict(map(parse_fn, lines))
+
+
+def get_dualway_constraints(
+    constraints: dict[tuple[KT, KT], Constraint[T]],
+) -> dict[tuple[KT, KT], Constraint[T]]:
+    """Return new constraints after ensuring dual-way mapping."""
+    dualway = {}
+    for (one, two), cmp in constraints.items():
+        dualway[(one, two)] = cmp
+        # TODO: if ever non-unary constraint support, this will need to
+        # change.
+        dualway[(two, one)] = cmp
+    return dualway
+
+
 class CSP(NamedTuple, Generic[KT, VT]):
     """Constraint Satisfaction Problem solver."""
 
@@ -111,11 +134,12 @@ class CSP(NamedTuple, Generic[KT, VT]):
             if self.revise(x_i, x_j, inferences, assignments):
                 if not inferences[x_i]:
                     return None
-                ##                for x_k in self.get_neighbors(x_i) - {x_j}:
-                for x_k in self.get_neighbors(x_i) - {x_i}:
+                # for x_k in self.get_neighbors(x_i) - {x_j}:
+                # {x_i}
+                for x_k in self.get_neighbors(x_i) - {x_i, x_j}:
                     queue.append((x_k, x_i))
-        ##        if inferences != self.domains:
-        ##            print(f'{inferences = }')
+        # if inferences != self.domains:
+        #    print(f'{inferences = }')
         return inferences
 
     def revise(
@@ -134,7 +158,10 @@ class CSP(NamedTuple, Generic[KT, VT]):
         values_j = {assignments[x_j]} if x_j in assignments else domains[x_j]
 
         for value_i in tuple(domains[x_i]):
-            if x_i in assignments and value_i != assignments[x_i]:
+            # if x_i in assignments and value_i != assignments[x_i]:
+            if (
+                assignment := assignments.get(x_i)
+            ) is not None and value_i != assignment:
                 continue
 
             supported = any(compare(value_i, value_j) for value_j in values_j)
@@ -144,28 +171,44 @@ class CSP(NamedTuple, Generic[KT, VT]):
 
         return revised
 
-    def backtrace_search(self) -> dict[KT, VT] | None:
-        """Return dict of solution variable assignments or None on no solution."""
-        return self.backtrace({})
+    def unassigned_variables(self, assignment: dict[KT, VT]) -> set[KT]:
+        """Return set of unassigned variables."""
+        return self.variables - set(assignment)
 
     def select_unassigned_variable(self, assignment: dict[KT, VT]) -> KT:
         """Return an unassigned variable name."""
-        unassigned = self.variables - set(assignment)
-        options_per_var = {len(self.domains[var]): var for var in unassigned}
-        return options_per_var[min(options_per_var)]
+        unassigned = self.unassigned_variables(assignment)
+        if not unassigned:
+            raise ValueError("no unassigned variables")
+        # options_per_var = {len(self.domains[var]): var for var in unassigned}
+        # return options_per_var[min(options_per_var)]
+        min_options = float("inf")
+        equal_min: list[KT] = []
+        for var in unassigned:
+            options_count = len(self.domains[var])
+            if options_count < min_options:
+                min_options = options_count
+                equal_min.clear()
+            if options_count == min_options:
+                equal_min.append(var)
+
+        if len(equal_min) == 1:
+            return equal_min.pop()
+
+        return max(
+            equal_min,
+            # technically should do ` - {var}` but since all have var
+            # included it's fine.
+            key=lambda var: len(self.get_neighbors(var)),
+        )
 
     def value_consistent_assignment(
         self,
         var: KT,
         value: VT,
-        assignment: dict[KT, VT],
     ) -> bool:
         """Return if a value is consistent with the domain of a variable."""
         return value in self.domains[var]
-
-    def assignment_complete(self, assignment: dict[KT, VT]) -> bool:
-        """Return if an assignment is complete or not."""
-        return not (self.variables - set(assignment))
 
     def order_domain_values(
         self,
@@ -175,52 +218,94 @@ class CSP(NamedTuple, Generic[KT, VT]):
         """Return all domain values for a given variable."""
         return self.domains[var]
 
-    def backtrace(
+    ##def backtrace(
+    ##    self,
+    ##    assignment: dict[KT, VT],
+    ##) -> dict[KT, VT] | None:
+    ##    """Return complete assignment or None on unsolvable problem."""
+    ##    if not self.unassigned_variables(assignment):
+    ##        return assignment
+    ##    var = self.select_unassigned_variable(assignment)
+    ##    for value in self.order_domain_values(var, assignment):
+    ##        if self.value_consistent_assignment(var, value):
+    ##            assignment[var] = value
+    ##            inference = self.arc_3(assignment)
+    ##            if inference is not None:
+    ##                domains_backup = self.domains_copy()
+    ##                ##add inferences to csp
+    ##                self.domains.update(inference)
+    ##                result = self.backtrace(assignment)
+    ##                if result is not None:
+    ##                    return result
+    ##                ##remove inferences from csp
+    ##                self.domains.update(domains_backup)
+    ##            del assignment[var]
+    ##    return None
+
+    def backtrace_search(self) -> dict[KT, VT] | None:
+        """Return dict of solution variable assignments or None on no solution."""
+        ##        return self.backtrace({})
+        generator = self.backtrace_generator_search(None)
+        try:
+            while True:
+                next(generator)
+        except StopIteration as exc:
+            assert exc.value is None or isinstance(exc.value, dict)  # noqa: PT017
+            return exc.value
+
+    def backtrace_generator(
         self,
         assignment: dict[KT, VT],
-    ) -> dict[KT, VT] | None:
-        """Return complete assignment or None on unsolvable problem."""
-        if self.assignment_complete(assignment):
+        unset_yield_value: T,
+    ) -> Generator[tuple[KT, VT | T], None, dict[KT, VT] | None]:
+        """Yield variable, value tuples or variable, unset_yield_value tuples while finding a solution.
+
+        Returns None on unsolvable or an assignments dictionary on success.
+        """
+        if not self.unassigned_variables(assignment):
             return assignment
         var = self.select_unassigned_variable(assignment)
         for value in self.order_domain_values(var, assignment):
-            if self.value_consistent_assignment(var, value, assignment):
+            if self.value_consistent_assignment(var, value):
                 assignment[var] = value
+                yield var, value
                 inference = self.arc_3(assignment)
                 if inference is not None:
                     domains_backup = self.domains_copy()
                     ##add inferences to csp
                     self.domains.update(inference)
-                    result = self.backtrace(assignment)
-                    if result is not None:
-                        return result
+                    generator = self.backtrace_generator(
+                        assignment,
+                        unset_yield_value,
+                    )
+                    try:
+                        while True:
+                            yield next(generator)
+                    except StopIteration as exc:
+                        if exc.value is not None:
+                            assert isinstance(exc.value, dict)  # noqa: PT017
+                            return exc.value
                     ##remove inferences from csp
                     self.domains.update(domains_backup)
                 del assignment[var]
+                yield var, unset_yield_value
         return None
 
+    def backtrace_generator_search(
+        self,
+        unset_yield_value: T,
+    ) -> Generator[tuple[KT, VT | T], None, dict[KT, VT] | None]:
+        """Yield variable, value tuples or variable, unset_yield_value tuples while finding a solution.
 
-def get_constraint_dict_from_strings(
-    lines: Iterable[str],
-) -> dict[tuple[str, str], Constraint[T]]:
-    """Return constraint dictionary from iterable of constraint strings."""
-    parse_fn: Callable[[str], tuple[tuple[str, str], Constraint[T]]] = (
-        parse_constraint
-    )
-    return dict(map(parse_fn, lines))
-
-
-def get_dualway_constraints(
-    constraints: dict[tuple[KT, KT], Constraint[T]],
-) -> dict[tuple[KT, KT], Constraint[T]]:
-    """Return new constraints after ensuring dual-way mapping."""
-    dualway = {}
-    for (one, two), cmp in constraints.items():
-        dualway[(one, two)] = cmp
-        # TODO: if ever non-unary constraint support, this will need to
-        # change.
-        dualway[(two, one)] = cmp
-    return dualway
+        Returns None on unsolvable or an assignments dictionary on success.
+        """
+        generator = self.backtrace_generator({}, unset_yield_value)
+        try:
+            while True:
+                yield next(generator)
+        except StopIteration as exc:
+            assert exc.value is None or isinstance(exc.value, dict)  # noqa: PT017
+            return exc.value
 
 
 def run() -> None:
@@ -256,6 +341,7 @@ def run() -> None:
         ),
     )
     print(csp)
+    print()
     print(f"{csp.backtrace_search() = }")
     sudoku_csp = CSP[str, int](
         {
@@ -574,6 +660,7 @@ def run() -> None:
             ),
         ),
     )
+    print()
     print(f"{sudoku_csp.backtrace_search() = }")
 
 
